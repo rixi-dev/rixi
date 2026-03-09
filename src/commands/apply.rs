@@ -82,6 +82,47 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
+    // Reload components that have a reload command
+    println!();
+    println!("{}", "Reloading components:".bold());
+    for component in &manifest.meta.components {
+        let entry = &registry[component.as_str()];
+        if entry.reload.is_empty() {
+            println!(
+                "  {} {:<12} {}",
+                "–".dimmed(),
+                component,
+                "auto-reloads".dimmed()
+            );
+            continue;
+        }
+
+        let status = std::process::Command::new("sh")
+            .args(["-c", entry.reload])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+
+        match status {
+            Ok(exit) if exit.success() => {
+                println!(
+                    "  {} {:<12} {}",
+                    "✓".green().bold(),
+                    component,
+                    entry.reload.dimmed()
+                );
+            }
+            _ => {
+                println!(
+                    "  {} {:<12} {}",
+                    "✗".yellow(),
+                    component,
+                    "reload failed (is it running?)".dimmed()
+                );
+            }
+        }
+    }
+
     // Store rice in ~/.local/share/rixi/rices/author/theme/
     let store_dir = paths::rices_dir()
         .join(&manifest.meta.author)

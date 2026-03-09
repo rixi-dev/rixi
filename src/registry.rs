@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 /// A component in the built-in registry — maps a component name
-/// to its standard XDG config file paths.
+/// to its standard XDG config file paths and an optional reload command.
 #[derive(Debug, Clone)]
 pub struct ComponentEntry {
     pub paths: Vec<&'static str>,
+    /// Shell command to hot-reload the component after config changes.
+    /// Empty string means the component reloads automatically (e.g. kitty).
+    pub reload: &'static str,
 }
 
 /// Returns the built-in component registry.
@@ -17,6 +20,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "bspwm",
         ComponentEntry {
             paths: vec!["~/.config/bspwm/bspwmrc"],
+            reload: "bspc wm -r",
         },
     );
 
@@ -27,6 +31,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
                 "~/.config/polybar/config",
                 "~/.config/polybar/colors.ini",
             ],
+            reload: "killall -q polybar; polybar &",
         },
     );
 
@@ -34,6 +39,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "rofi",
         ComponentEntry {
             paths: vec!["~/.config/rofi/config.rasi"],
+            reload: "",
         },
     );
 
@@ -41,6 +47,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "dunst",
         ComponentEntry {
             paths: vec!["~/.config/dunst/dunstrc"],
+            reload: "killall -q dunst; dunst &",
         },
     );
 
@@ -51,6 +58,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
                 "~/.config/hypr/hyprland.conf",
                 "~/.config/hypr/hyprpaper.conf",
             ],
+            reload: "hyprctl reload",
         },
     );
 
@@ -58,6 +66,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "kitty",
         ComponentEntry {
             paths: vec!["~/.config/kitty/kitty.conf"],
+            reload: "",
         },
     );
 
@@ -65,6 +74,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "alacritty",
         ComponentEntry {
             paths: vec!["~/.config/alacritty/alacritty.toml"],
+            reload: "",
         },
     );
 
@@ -72,6 +82,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "picom",
         ComponentEntry {
             paths: vec!["~/.config/picom/picom.conf"],
+            reload: "pkill -q picom; picom --daemon",
         },
     );
 
@@ -79,6 +90,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         "sway",
         ComponentEntry {
             paths: vec!["~/.config/sway/config"],
+            reload: "swaymsg reload",
         },
     );
 
@@ -89,6 +101,7 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
                 "~/.config/waybar/config",
                 "~/.config/waybar/style.css",
             ],
+            reload: "killall -q waybar; waybar &",
         },
     );
 
