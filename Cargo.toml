@@ -1,0 +1,17 @@
+[package]
+name = "rixi"
+version = "0.1.0"
+edition = "2021"
+description = "A terminal-first, component-based Linux rice manager"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+anyhow = "1"
+colored = "3"
+thiserror = "2"
+whoami = "1"
