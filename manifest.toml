@@ -1,0 +1,23 @@
+[meta]
+name = "my-rice"
+author = "sathiya"
+version = "0.1.0"
+wm = "bspwm"
+display_server = ["x11"]
+components = [
+    "bspwm",
+    "kitty",
+    "picom",
+]
+tags = []
+description = "TODO: describe your rice"
+
+[dependencies]
+packages = []
+fonts = []
+icons = []
+
+[overrides]
+
+[hooks]
+post_apply = []

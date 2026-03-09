@@ -18,7 +18,6 @@ pub fn run() -> Result<()> {
     println!();
 
     let mut detected: Vec<String> = Vec::new();
-    let mut not_found: Vec<String> = Vec::new();
 
     // Sort component names for consistent output
     let mut component_names: Vec<&&str> = registry.keys().collect();
@@ -38,9 +37,6 @@ pub fn run() -> Result<()> {
                 first_path.dimmed()
             );
             detected.push(name.to_string());
-        } else {
-            println!("  {} {:<12} {}", "✗".red(), name, "not found".dimmed());
-            not_found.push(name.to_string());
         }
     }
 
