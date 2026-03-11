@@ -1,10 +1,12 @@
 use crate::errors::{Result, RixiError};
 use crate::paths;
 use crate::registry;
+use crate::shell;
 
 /// Create a snapshot of all files that are about to be overwritten.
+/// If `include_shell` is true, also snapshot shell config files.
 /// Returns the snapshot timestamp string used as the directory name.
-pub fn create_snapshot(components: &[String]) -> Result<String> {
+pub fn create_snapshot(components: &[String], include_shell: bool) -> Result<String> {
     let registry = registry::builtin_registry();
     let timestamp = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     let snapshot_dir = paths::snapshots_dir().join(&timestamp);
@@ -19,7 +21,6 @@ pub fn create_snapshot(components: &[String]) -> Result<String> {
         for raw_path in &entry.paths {
             let src = paths::expand_tilde(raw_path);
             if src.exists() {
-                // Preserve the component directory structure inside the snapshot
                 let dest = snapshot_dir.join(component).join(
                     src.file_name()
                         .expect("config file should have a filename"),
@@ -30,10 +31,16 @@ pub fn create_snapshot(components: &[String]) -> Result<String> {
         }
     }
 
+    // Snapshot shell config files if needed
+    if include_shell {
+        shell::snapshot_shell_files(&snapshot_dir)?;
+    }
+
     Ok(timestamp)
 }
 
 /// Restore files from a snapshot back to their XDG paths.
+/// Also restores shell config files if they were snapshotted.
 pub fn restore_snapshot(snapshot_id: &str) -> Result<Vec<String>> {
     let registry = registry::builtin_registry();
     let snapshot_dir = paths::snapshots_dir().join(snapshot_id);
@@ -53,8 +60,12 @@ pub fn restore_snapshot(snapshot_id: &str) -> Result<Vec<String>> {
 
         let component_name = entry.file_name().to_string_lossy().to_string();
 
+        // Skip special snapshot directories
+        if component_name == "fish_conf_d" {
+            continue;
+        }
+
         if let Some(reg_entry) = registry.get(component_name.as_str()) {
-            // Restore each file from the snapshot back to its XDG path
             for raw_path in &reg_entry.paths {
                 let dest = paths::expand_tilde(raw_path);
                 let src = snapshot_dir.join(&component_name).join(
@@ -70,6 +81,9 @@ pub fn restore_snapshot(snapshot_id: &str) -> Result<Vec<String>> {
             restored.push(component_name);
         }
     }
+
+    // Restore shell config files
+    shell::restore_shell_files(&snapshot_dir)?;
 
     Ok(restored)
 }

@@ -7,7 +7,7 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Init => commands::init::run(),
+        Commands::Init { path } => commands::init::run(path.as_deref()),
         Commands::Apply { path } => commands::apply::run(&path),
         Commands::Rollback => commands::rollback::run(),
         Commands::List => commands::list::run(),

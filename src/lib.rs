@@ -1,8 +1,12 @@
 pub mod cli;
 pub mod commands;
+pub mod deps;
+pub mod distro;
 pub mod errors;
 pub mod manifest;
 pub mod paths;
 pub mod registry;
+pub mod shell;
 pub mod snapshot;
 pub mod state;
+pub mod wallpaper;

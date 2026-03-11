@@ -1,12 +1,15 @@
 use colored::Colorize;
 use std::path::Path;
 
+use crate::deps;
 use crate::errors::{Result, RixiError};
 use crate::manifest::Manifest;
 use crate::paths;
 use crate::registry;
+use crate::shell;
 use crate::snapshot;
 use crate::state::State;
+use crate::wallpaper;
 
 /// Apply a rice from a local directory containing a manifest.toml.
 pub fn run(rice_path: &Path) -> Result<()> {
@@ -20,7 +23,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
     );
     println!();
 
-    // Validate that all declared components exist in the built-in registry
+    // 1. Validate that all declared components exist in the built-in registry
     let registry = registry::builtin_registry();
     for component in &manifest.meta.components {
         if !registry.contains_key(component.as_str()) {
@@ -28,7 +31,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // Validate that the component files exist in the rice source directory
+    // 2. Validate that the component files exist in the rice source directory
     for component in &manifest.meta.components {
         let component_dir = rice_path.join(component);
         if !component_dir.exists() {
@@ -39,29 +42,35 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // Print missing dependencies (don't install, just warn)
-    print_missing_deps(&manifest);
+    // 3. Run dependency check and prompt user
+    if !deps::check_and_prompt(&manifest.dependencies) {
+        println!();
+        println!("{}", "Apply cancelled.".yellow().bold());
+        return Ok(());
+    }
+    println!();
 
-    // Snapshot current state
+    // 4. Snapshot current state
     print!("{}", "Snapshotting current state... ".dimmed());
-    let snapshot_id = snapshot::create_snapshot(&manifest.meta.components)?;
+    // Detect shell early so we know whether to include shell files in snapshot
+    let shell_config = manifest.shell.clone().or_else(detect_shell);
+    let has_shell = shell_config.is_some();
+    let snapshot_id = snapshot::create_snapshot(&manifest.meta.components, has_shell)?;
     println!("{}", "done".green());
     println!();
 
-    // Apply components: copy files from rice directory to XDG paths
+    // 5. Apply component config files per registry paths
     println!("{}", "Applying components:".bold());
     for component in &manifest.meta.components {
         let entry = &registry[component.as_str()];
 
-        // Check for override path
         let override_path = manifest.overrides.get(component);
 
         if let Some(custom_path) = override_path {
-            // Override: copy from rice dir to custom path
             let src_dir = rice_path.join(component);
             let dest = paths::expand_tilde(custom_path);
             paths::ensure_dir(&dest.parent().unwrap().to_path_buf())?;
-            copy_component_files(&src_dir, &[custom_path.as_str()])?;
+            copy_component_files_from_dir(&src_dir, &[custom_path.as_str()])?;
             println!(
                 "  {} {:<12} → {}",
                 "✓".green().bold(),
@@ -69,7 +78,6 @@ pub fn run(rice_path: &Path) -> Result<()> {
                 custom_path
             );
         } else {
-            // Standard: copy from rice dir to registry paths
             let src_dir = rice_path.join(component);
             copy_component_files_from_dir(&src_dir, &entry.paths)?;
             let display_path = entry.paths[0];
@@ -82,7 +90,22 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // Reload components that have a reload command
+    // 6. Handle shell configuration — use manifest [shell] if present,
+    //    otherwise use the already-detected shell config.
+    if let Some(ref sc) = shell_config {
+        println!();
+        println!("{}", "Shell configuration:".bold());
+        shell::apply(sc, &manifest.namespace())?;
+    }
+
+    // 7. Set wallpaper
+    if let Some(ref wall_config) = manifest.wallpaper {
+        println!();
+        println!("{}", "Wallpaper:".bold());
+        wallpaper::apply(wall_config, rice_path)?;
+    }
+
+    // 8. Reload components that have a reload command
     println!();
     println!("{}", "Reloading components:".bold());
     for component in &manifest.meta.components {
@@ -123,7 +146,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // Store rice in ~/.local/share/rixi/rices/author/theme/
+    // 9. Store rice in ~/.local/share/rixi/rices/author/theme/
     let store_dir = paths::rices_dir()
         .join(&manifest.meta.author)
         .join(&manifest.meta.name);
@@ -131,7 +154,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
         copy_dir_recursive(rice_path, &store_dir)?;
     }
 
-    // Update state
+    // 10. Update state
     let mut state = State::load()?;
     state.set_current(
         manifest.meta.author.clone(),
@@ -154,40 +177,6 @@ pub fn run(rice_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Print dependency warnings to stdout.
-fn print_missing_deps(manifest: &Manifest) {
-    let deps = &manifest.dependencies;
-    let has_any = !deps.packages.is_empty() || !deps.fonts.is_empty() || !deps.icons.is_empty();
-
-    if !has_any {
-        return;
-    }
-
-    println!(
-        "{}",
-        "Missing dependencies (install manually):".yellow().bold()
-    );
-
-    if !deps.packages.is_empty() {
-        println!(
-            "  {} sudo pacman -S {}",
-            "[pacman]".dimmed(),
-            deps.packages.join(" ")
-        );
-    }
-    if !deps.fonts.is_empty() {
-        for font in &deps.fonts {
-            println!("  {} {} — https://nerdfonts.com", "[fonts]".dimmed(), font);
-        }
-    }
-    if !deps.icons.is_empty() {
-        for icon in &deps.icons {
-            println!("  {} {}", "[icons]".dimmed(), icon);
-        }
-    }
-    println!();
-}
-
 /// Copy component files from the rice source directory to their target XDG paths.
 fn copy_component_files_from_dir(src_dir: &Path, target_paths: &[&str]) -> Result<()> {
     for raw_path in target_paths {
@@ -203,11 +192,6 @@ fn copy_component_files_from_dir(src_dir: &Path, target_paths: &[&str]) -> Resul
         }
     }
     Ok(())
-}
-
-/// Copy component files from the rice source directory to a list of custom paths.
-fn copy_component_files(src_dir: &Path, target_paths: &[&str]) -> Result<()> {
-    copy_component_files_from_dir(src_dir, target_paths)
 }
 
 /// Recursively copy a directory.

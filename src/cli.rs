@@ -12,7 +12,10 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Scaffold a manifest from your current setup
-    Init,
+    Init {
+        /// Directory to scan for components (defaults to ~/.config)
+        path: Option<PathBuf>,
+    },
 
     /// Apply a rice from a local directory containing a manifest.toml
     Apply {
