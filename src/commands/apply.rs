@@ -177,6 +177,37 @@ pub fn run(rice_path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Detect the user's shell from $SHELL and return a ShellConfig.
+fn detect_shell() -> Option<crate::manifest::ShellConfig> {
+    let shell_var = std::env::var("SHELL").ok()?;
+    let shell_type = if shell_var.contains("zsh") {
+        "zsh"
+    } else if shell_var.contains("bash") {
+        "bash"
+    } else if shell_var.contains("fish") {
+        "fish"
+    } else {
+        return None;
+    };
+
+    let prompt = if which_exists("starship") { "starship" } else { "none" };
+
+    Some(crate::manifest::ShellConfig {
+        shell_type: shell_type.to_string(),
+        prompt: prompt.to_string(),
+    })
+}
+
+fn which_exists(cmd: &str) -> bool {
+    std::process::Command::new("which")
+        .arg(cmd)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 /// Copy component files from the rice source directory to their target XDG paths.
 fn copy_component_files_from_dir(src_dir: &Path, target_paths: &[&str]) -> Result<()> {
     for raw_path in target_paths {
