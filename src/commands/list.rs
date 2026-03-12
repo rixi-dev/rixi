@@ -4,9 +4,9 @@ use crate::errors::Result;
 use crate::paths;
 use crate::state::State;
 
-/// List all locally stored rices under ~/.local/share/rixi/rices/.
+/// List all locally stored rices under ~/.local/share/rixi/store/.
 pub fn run() -> Result<()> {
-    let rices_dir = paths::rices_dir();
+    let rices_dir = paths::store_dir();
 
     if !rices_dir.exists() {
         println!();

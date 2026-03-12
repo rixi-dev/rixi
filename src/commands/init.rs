@@ -1,22 +1,31 @@
 use colored::Colorize;
 use dialoguer::{Input, theme::ColorfulTheme};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::errors::Result;
 use crate::manifest::{Manifest, Meta, Dependencies, Hooks, WallpaperConfig};
 use crate::paths;
 use crate::registry;
 
-/// Interactively scaffold a manifest from the user's current setup.
-pub fn run(scan_path: Option<&Path>) -> Result<()> {
+/// Known component directory names that rixi recognizes in ~/.config/.
+const KNOWN_COMPONENTS: &[&str] = &[
+    "bspwm", "i3", "openbox", "awesome", "herbstluftwm", "hypr", "sway", "river", "niri",
+    "waybar", "polybar", "eww", "rofi", "wofi", "tofi", "fuzzel", "kitty", "alacritty",
+    "wezterm", "foot", "dunst", "mako", "swaync", "picom", "swaylock", "fish", "starship",
+];
+
+/// A detected component: name + the source directory holding its config files.
+struct DetectedComponent {
+    name: String,
+    source_dir: PathBuf,
+}
+
+/// Interactively scaffold a rice into ~/.local/share/rixi/store/<author>/<theme>/.
+pub fn run(_scan_path: Option<&Path>) -> Result<()> {
     let registry = registry::builtin_registry();
     let theme = ColorfulTheme::default();
-
-    let config_dir = match scan_path {
-        Some(p) => p.to_path_buf(),
-        None => paths::expand_tilde("~/.config"),
-    };
+    let config_dir = paths::expand_tilde("~/.config");
 
     println!();
 
@@ -56,36 +65,20 @@ pub fn run(scan_path: Option<&Path>) -> Result<()> {
 
     // ── Scan for components ───────────────────────────────────────────────────
     println!();
-    print!("{}", "Scanning installed components... ".bold());
+    print!("{}", "Scanning ~/.config for components...".bold());
 
-    let mut detected: Vec<String> = Vec::new();
-    let mut component_names: Vec<&&str> = registry.keys().collect();
-    component_names.sort();
-
-    for name_key in &component_names {
-        let entry = &registry[**name_key];
-        let found = entry
-            .paths
-            .iter()
-            .any(|p| resolve_component_path(p, &config_dir).exists());
-        if found {
-            detected.push(name_key.to_string());
-        }
-    }
+    let detected = scan_components(&config_dir);
 
     println!();
     if detected.is_empty() {
-        println!(
-            "  {}",
-            "No known components detected.".yellow()
-        );
+        println!("  {}", "No known components detected.".yellow());
     } else {
-        let line: Vec<String> = detected
-            .iter()
-            .map(|c| format!("  {} {}", "✓".green().bold(), c))
-            .collect();
-        println!("{}", line.join("  "));
+        for comp in &detected {
+            println!("  {} {}", "✓".green().bold(), comp.name);
+        }
     }
+
+    let detected_names: Vec<String> = detected.iter().map(|c| c.name.clone()).collect();
 
     // ── Parse inputs ──────────────────────────────────────────────────────────
     let tags: Vec<String> = tags_input
@@ -97,7 +90,6 @@ pub fn run(scan_path: Option<&Path>) -> Result<()> {
     let wallpaper = if wallpaper_input.trim().is_empty() {
         None
     } else {
-        // Auto-detect setter from installed tools
         let setter = detect_wallpaper_setter();
         Some(WallpaperConfig {
             file: wallpaper_input.trim().to_string(),
@@ -105,8 +97,16 @@ pub fn run(scan_path: Option<&Path>) -> Result<()> {
         })
     };
 
-    let wm = detect_wm(&detected);
-    let display_server = detect_display_server(&detected, &registry);
+    let wm = detect_wm(&detected_names);
+    let display_server = detect_display_server(&detected_names, &registry);
+
+    // ── Build rice directory in store ──────────────────────────────────────────
+    let rice_dir = paths::store_dir().join(&author).join(&name);
+    let configs_dir = rice_dir.join("configs");
+    let walls_dir = rice_dir.join("walls");
+    paths::ensure_dir(&rice_dir)?;
+    paths::ensure_dir(&configs_dir)?;
+    paths::ensure_dir(&walls_dir)?;
 
     // ── Build manifest ────────────────────────────────────────────────────────
     let manifest = Manifest {
@@ -117,31 +117,33 @@ pub fn run(scan_path: Option<&Path>) -> Result<()> {
             wm,
             display_server,
             colorscheme: Some(colorscheme),
-            components: detected.clone(),
+            components: detected_names,
             tags,
             description: Some(description),
         },
         dependencies: Dependencies::default(),
-        shell: None,  // detected at apply time from $SHELL
-        wallpaper,
+        shell: None,
+        wallpaper: wallpaper.clone(),
         overrides: HashMap::new(),
         hooks: Hooks::default(),
     };
 
     let toml_str = manifest.to_toml_string()?;
-    std::fs::write("manifest.toml", &toml_str)?;
+    std::fs::write(rice_dir.join("manifest.toml"), &toml_str)?;
 
-    // ── Copy component config files ───────────────────────────────────────────
-    for component in &detected {
-        let entry = &registry[component.as_str()];
-        let component_dir = Path::new(".").join(component);
-        paths::ensure_dir(&component_dir)?;
+    // ── Copy component config files into configs/<component>/ ─────────────────
+    for comp in &detected {
+        let dest_dir = configs_dir.join(&comp.name);
+        paths::ensure_dir(&dest_dir)?;
+        copy_dir_recursive(&comp.source_dir, &dest_dir)?;
+    }
 
-        for raw_path in &entry.paths {
-            let src = resolve_component_path(raw_path, &config_dir);
-            if src.exists() {
-                let filename = src.file_name().expect("config file should have a filename");
-                std::fs::copy(&src, component_dir.join(filename))?;
+    // ── Copy wallpaper into walls/ ────────────────────────────────────────────
+    if let Some(ref wall) = wallpaper {
+        let src = PathBuf::from(&wall.file);
+        if src.exists() {
+            if let Some(fname) = src.file_name() {
+                std::fs::copy(&src, walls_dir.join(fname))?;
             }
         }
     }
@@ -149,13 +151,103 @@ pub fn run(scan_path: Option<&Path>) -> Result<()> {
     println!();
     println!(
         "{}",
-        "Scaffolding manifest.toml... done".green().bold()
+        format!(
+            "Scaffolded {}/{} into {}",
+            author,
+            name,
+            rice_dir.display()
+        )
+        .green()
+        .bold()
     );
 
     Ok(())
 }
 
-/// Try to detect the window manager from the detected components or environment.
+// ── Directory-name-based component detection ──────────────────────────────────
+
+/// Scan `config_dir` (typically ~/.config) ONE level deep.
+/// Matches directory names against the known component list.
+/// Special handling for `hypr/` → splits into hyprland/hyprlock by filename.
+fn scan_components(config_dir: &Path) -> Vec<DetectedComponent> {
+    let mut result = Vec::new();
+
+    let entries = match std::fs::read_dir(config_dir) {
+        Ok(e) => e,
+        Err(_) => return result,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let dir_name = match entry.file_name().to_str() {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+
+        // Handle top-level files (e.g. ~/.config/starship.toml)
+        if path.is_file() {
+            if dir_name == "starship.toml" {
+                result.push(DetectedComponent {
+                    name: "starship".to_string(),
+                    source_dir: config_dir.to_path_buf(),
+                });
+            }
+            continue;
+        }
+
+        if !path.is_dir() {
+            continue;
+        }
+
+        // Special case: hypr/ contains both hyprland.conf and hyprlock.conf
+        if dir_name == "hypr" {
+            if path.join("hyprland.conf").exists() {
+                result.push(DetectedComponent {
+                    name: "hyprland".to_string(),
+                    source_dir: path.clone(),
+                });
+            }
+            if path.join("hyprlock.conf").exists() {
+                result.push(DetectedComponent {
+                    name: "hyprlock".to_string(),
+                    source_dir: path.clone(),
+                });
+            }
+            continue;
+        }
+
+        // Standard match: directory name in known list
+        if KNOWN_COMPONENTS.contains(&dir_name.as_str()) {
+            result.push(DetectedComponent {
+                name: dir_name,
+                source_dir: path,
+            });
+        }
+    }
+
+    result.sort_by(|a, b| a.name.cmp(&b.name));
+    result
+}
+
+/// Recursively copy all files and subdirectories from src to dest.
+fn copy_dir_recursive(src: &Path, dest: &Path) -> Result<()> {
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let dest_path = dest.join(entry.file_name());
+
+        if file_type.is_dir() {
+            paths::ensure_dir(&dest_path)?;
+            copy_dir_recursive(&entry.path(), &dest_path)?;
+        } else {
+            std::fs::copy(entry.path(), &dest_path)?;
+        }
+    }
+    Ok(())
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 fn detect_wm(detected: &[String]) -> Option<String> {
     if let Ok(desktop) = std::env::var("XDG_CURRENT_DESKTOP") {
         let lower = desktop.to_lowercase();
@@ -179,7 +271,6 @@ fn detect_wm(detected: &[String]) -> Option<String> {
     None
 }
 
-/// Infer display server from detected components using registry display field.
 fn detect_display_server(
     detected: &[String],
     registry: &HashMap<&str, crate::registry::ComponentEntry>,
@@ -209,7 +300,6 @@ fn detect_display_server(
     }
 }
 
-/// Detect an available wallpaper setter from PATH.
 fn detect_wallpaper_setter() -> String {
     let setters = ["swww", "hyprpaper", "swaybg", "feh", "nitrogen"];
     for setter in &setters {
@@ -220,7 +310,6 @@ fn detect_wallpaper_setter() -> String {
     "feh".to_string()
 }
 
-/// Check if a command exists in PATH.
 fn which_exists(cmd: &str) -> bool {
     std::process::Command::new("which")
         .arg(cmd)
@@ -229,16 +318,4 @@ fn which_exists(cmd: &str) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
-}
-
-/// Resolve a registry path (e.g. `~/.config/bspwm/bspwmrc`) against a scan directory.
-/// Strips the `~/.config/` prefix and re-roots under `scan_dir`.
-fn resolve_component_path(registry_path: &str, scan_dir: &Path) -> std::path::PathBuf {
-    let expanded = paths::expand_tilde(registry_path);
-    let config_default = paths::expand_tilde("~/.config");
-    if let Ok(relative) = expanded.strip_prefix(&config_default) {
-        scan_dir.join(relative)
-    } else {
-        expanded
-    }
 }

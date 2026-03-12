@@ -8,7 +8,7 @@ fn main() {
 
     let result = match cli.command {
         Commands::Init { path } => commands::init::run(path.as_deref()),
-        Commands::Apply { path } => commands::apply::run(&path),
+        Commands::Apply { rice } => commands::apply::run(&rice),
         Commands::Rollback => commands::rollback::run(),
         Commands::List => commands::list::run(),
     };

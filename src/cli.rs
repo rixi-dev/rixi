@@ -17,10 +17,10 @@ pub enum Commands {
         path: Option<PathBuf>,
     },
 
-    /// Apply a rice from a local directory containing a manifest.toml
+    /// Apply a rice from the rixi store
     Apply {
-        /// Path to the rice directory
-        path: PathBuf,
+        /// Rice to apply (author/theme)
+        rice: String,
     },
 
     /// Rollback to the previous state before the last apply

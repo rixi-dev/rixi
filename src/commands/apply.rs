@@ -11,10 +11,19 @@ use crate::snapshot;
 use crate::state::State;
 use crate::wallpaper;
 
-/// Apply a rice from a local directory containing a manifest.toml.
-pub fn run(rice_path: &Path) -> Result<()> {
-    let manifest_path = rice_path.join("manifest.toml");
+/// Apply a rice from the rixi store. `rice` is "author/theme".
+pub fn run(rice: &str) -> Result<()> {
+    let parts: Vec<&str> = rice.splitn(2, '/').collect();
+    if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
+        return Err(RixiError::Other(
+            "Rice must be specified as author/theme".to_string(),
+        ));
+    }
+
+    let rice_dir = paths::store_dir().join(parts[0]).join(parts[1]);
+    let manifest_path = rice_dir.join("manifest.toml");
     let manifest = Manifest::load(&manifest_path)?;
+    let configs_dir = rice_dir.join("configs");
 
     println!();
     println!(
@@ -31,9 +40,9 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // 2. Validate that the component files exist in the rice source directory
+    // 2. Validate that component dirs exist under configs/
     for component in &manifest.meta.components {
-        let component_dir = rice_path.join(component);
+        let component_dir = configs_dir.join(component);
         if !component_dir.exists() {
             return Err(RixiError::ComponentFileMissing {
                 component: component.clone(),
@@ -52,7 +61,6 @@ pub fn run(rice_path: &Path) -> Result<()> {
 
     // 4. Snapshot current state
     print!("{}", "Snapshotting current state... ".dimmed());
-    // Detect shell early so we know whether to include shell files in snapshot
     let shell_config = manifest.shell.clone().or_else(detect_shell);
     let has_shell = shell_config.is_some();
     let snapshot_id = snapshot::create_snapshot(&manifest.meta.components, has_shell)?;
@@ -63,14 +71,14 @@ pub fn run(rice_path: &Path) -> Result<()> {
     println!("{}", "Applying components:".bold());
     for component in &manifest.meta.components {
         let entry = &registry[component.as_str()];
+        let src_dir = configs_dir.join(component);
 
         let override_path = manifest.overrides.get(component);
 
         if let Some(custom_path) = override_path {
-            let src_dir = rice_path.join(component);
             let dest = paths::expand_tilde(custom_path);
             paths::ensure_dir(&dest.parent().unwrap().to_path_buf())?;
-            copy_component_files_from_dir(&src_dir, &[custom_path.as_str()])?;
+            copy_component_files(&src_dir, &[custom_path.as_str()])?;
             println!(
                 "  {} {:<12} → {}",
                 "✓".green().bold(),
@@ -78,8 +86,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
                 custom_path
             );
         } else {
-            let src_dir = rice_path.join(component);
-            copy_component_files_from_dir(&src_dir, &entry.paths)?;
+            copy_component_files(&src_dir, &entry.paths)?;
             let display_path = entry.paths[0];
             println!(
                 "  {} {:<12} → {}",
@@ -90,8 +97,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // 6. Handle shell configuration — use manifest [shell] if present,
-    //    otherwise use the already-detected shell config.
+    // 6. Handle shell configuration
     if let Some(ref sc) = shell_config {
         println!();
         println!("{}", "Shell configuration:".bold());
@@ -102,7 +108,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
     if let Some(ref wall_config) = manifest.wallpaper {
         println!();
         println!("{}", "Wallpaper:".bold());
-        wallpaper::apply(wall_config, rice_path)?;
+        wallpaper::apply(wall_config, &rice_dir)?;
     }
 
     // 8. Reload components that have a reload command
@@ -146,15 +152,7 @@ pub fn run(rice_path: &Path) -> Result<()> {
         }
     }
 
-    // 9. Store rice in ~/.local/share/rixi/rices/author/theme/
-    let store_dir = paths::rices_dir()
-        .join(&manifest.meta.author)
-        .join(&manifest.meta.name);
-    if !store_dir.exists() {
-        copy_dir_recursive(rice_path, &store_dir)?;
-    }
-
-    // 10. Update state
+    // 9. Update state
     let mut state = State::load()?;
     state.set_current(
         manifest.meta.author.clone(),
@@ -208,8 +206,8 @@ fn which_exists(cmd: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Copy component files from the rice source directory to their target XDG paths.
-fn copy_component_files_from_dir(src_dir: &Path, target_paths: &[&str]) -> Result<()> {
+/// Copy component files from the rice configs dir to their target XDG paths.
+fn copy_component_files(src_dir: &Path, target_paths: &[&str]) -> Result<()> {
     for raw_path in target_paths {
         let dest = paths::expand_tilde(raw_path);
         let filename = dest
@@ -220,23 +218,6 @@ fn copy_component_files_from_dir(src_dir: &Path, target_paths: &[&str]) -> Resul
         if src.exists() {
             paths::ensure_dir(&dest.parent().unwrap().to_path_buf())?;
             std::fs::copy(&src, &dest)?;
-        }
-    }
-    Ok(())
-}
-
-/// Recursively copy a directory.
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let file_type = entry.file_type()?;
-        let dest_path = dst.join(entry.file_name());
-
-        if file_type.is_dir() {
-            copy_dir_recursive(&entry.path(), &dest_path)?;
-        } else {
-            std::fs::copy(entry.path(), &dest_path)?;
         }
     }
     Ok(())

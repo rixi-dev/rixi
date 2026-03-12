@@ -7,9 +7,9 @@ pub fn data_dir() -> PathBuf {
         .join("rixi")
 }
 
-/// Returns the rices directory: ~/.local/share/rixi/rices/
-pub fn rices_dir() -> PathBuf {
-    data_dir().join("rices")
+/// Returns the store directory: ~/.local/share/rixi/store/
+pub fn store_dir() -> PathBuf {
+    data_dir().join("store")
 }
 
 /// Returns the snapshots directory: ~/.local/share/rixi/snapshots/
