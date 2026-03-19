@@ -99,7 +99,7 @@ fn parse_rice(rice: &str) -> Result<(&str, &str)> {
 }
 
 fn rices_dir() -> PathBuf {
-    paths::data_dir().join("rices")
+    paths::store_dir()
 }
 
 fn config_file_path() -> PathBuf {
