@@ -28,4 +28,16 @@ pub enum Commands {
 
     /// List locally installed rices
     List,
+
+    /// Download a rice from the community registry
+    Pull {
+        /// Rice to download (author/theme)
+        rice: String,
+    },
+
+    /// Validate and submit a rice to the community registry
+    Push {
+        /// Rice to submit (author/theme)
+        rice: String,
+    },
 }

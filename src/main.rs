@@ -11,6 +11,8 @@ fn main() {
         Commands::Apply { rice } => commands::apply::run(&rice),
         Commands::Rollback => commands::rollback::run(),
         Commands::List => commands::list::run(),
+        Commands::Pull { rice } => commands::pull::run(&rice),
+        Commands::Push { rice } => commands::push::run(&rice),
     };
 
     if let Err(e) = result {
