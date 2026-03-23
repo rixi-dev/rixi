@@ -50,7 +50,7 @@ pub fn run(rice: &str) -> Result<()> {
 
     fork_themes_repo(&client, &token)?;
 
-    let branch_name = format!("rixi-push-{}-{}", author, theme);
+    let branch_name = format!("themes-{}", theme);
     let branch_tip_sha = create_branch(&client, &token, &username, &branch_name)?;
 
     upload_rice_files(
