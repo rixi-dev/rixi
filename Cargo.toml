@@ -5,6 +5,10 @@ edition = "2024"
 license = "MIT"
 description = "A terminal-first Linux rice manager for applying, sharing, and rolling back desktop themes"
 repository = "https://github.com/rixi-dev/rixi"
+homepage = "https://github.com/rixi-dev"
+readme = "README.md"
+keywords = ["linux", "rice", "dotfiles", "desktop", "cli"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
