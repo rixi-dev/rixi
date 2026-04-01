@@ -13,7 +13,7 @@ use crate::errors::{Result, RixiError};
 use crate::paths;
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
-const GITHUB_CLIENT_ID: &str = "Iv23livPJ5LxZBmldnBb";
+const GITHUB_CLIENT_ID: &str = "Ov23li3ccNZrXbph2aAI";
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct AppConfig {
@@ -212,9 +212,12 @@ fn run_device_flow(client: &Client) -> Result<String> {
         .map_err(|e| RixiError::Other(format!("Failed to request device code: {}", e)))?;
 
     if !device_code_response.status().is_success() {
+        let status = device_code_response.status().as_u16();
+        let body = device_code_response.text().unwrap_or_default();
         return Err(RixiError::Other(format!(
-            "Failed to request device code (status {})",
-            device_code_response.status().as_u16()
+            "Failed to request device code (status {}). {}",
+            status,
+            body
         )));
     }
 

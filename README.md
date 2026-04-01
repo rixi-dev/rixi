@@ -1,19 +1,16 @@
-<div align="center">
+<p align="center">
 
-<img src="docs/rixi-logo.png" alt="rixi" width="420" />
+<img src="docs/rixi-logo.png" alt="rixi" width="420"/>
+
+<br>
+
+**Stop copying. Start RIXI.**
 
 <br/>
 
-**Because `install.sh` is not a rice manager.**
+[![version](https://img.shields.io/badge/version-0.2.0-orange?style=flat-square)](https://github.com/rixi-dev/rixi/releases) [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![built with rust](https://img.shields.io/badge/built%20with-rust-orange?style=flat-square)](https://www.rust-lang.org/) [![linux only](https://img.shields.io/badge/linux-only-yellow?style=flat-square)]()
 
-<br/>
-
-[![version](https://img.shields.io/badge/version-0.1.0-orange?style=flat-square)](https://github.com/rixi-rs/rixi/releases)
-[![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![built with rust](https://img.shields.io/badge/built%20with-rust-orange?style=flat-square)](https://www.rust-lang.org/)
-[![linux only](https://img.shields.io/badge/linux-only-yellow?style=flat-square)]()
-
-</div>
+</p>
 
 ---
 
@@ -23,7 +20,7 @@ You found a beautiful desktop on r/unixporn. You clone the repo. You spend the n
 
 **RIXI fixes that.**
 
-RIXI is a terminal-first, component-based Linux rice manager built in Rust. It lets you package, apply, switch, and roll back desktop configurations — called *rices* — in a single command. No shell scripts. No manual config copying. No guessing.
+RIXI is a terminal-first, component-based Linux rice manager built in Rust. It lets you package, apply, switch, and roll back desktop configurations (called *rices*) in a single command. No shell scripts. No manual config copying. No guessing.
 
 ```bash
 rixi apply sathiya/gruvbox
@@ -31,25 +28,13 @@ rixi apply sathiya/gruvbox
 
 Your desktop transforms. Instantly.
 
-**RIXI is v0.1** — local rice manager. Network and community features coming in v0.2+.
+> **RIXI is v0.2** — local + community workflows are live. Pull themes from `rixi-dev/themes` and push your own with a PR in one command flow.
 
 ---
 
-## Demo
-
-<div align="center">
-  <img src="docs/rixi-demo.gif" alt="rixi demo" width="800" />
-</div>
-
----
-
-## The problem with how everyone does it today
-
-Every rice owner has a GitHub repo. Every repo has a different structure. Half of them have an `install.sh` that was written at 2am and works on exactly one machine. The other half just have a README that says "copy these files to `~/.config`."
-
-There is no standard. There is no tooling. There is no way to try a rice without committing to it.
-
-RIXI is the tool the ricing community never had.
+<p align="center">
+<img src="docs/rixi-demo.gif" alt="rixi demo" width="800"/>
+</p>
 
 ---
 
@@ -57,102 +42,40 @@ RIXI is the tool the ricing community never had.
 
 ```bash
 rixi init        # scaffold a manifest from your current setup
-rixi apply       # apply a rice — snapshot, copy, reload, done
+rixi apply       # snapshot, copy configs, reload, done
 rixi rollback    # something broke? go back instantly
 rixi list        # see what's installed locally
+rixi pull        # download a rice from rixi-dev/themes
+rixi push        # submit your local rice as a GitHub PR
 ```
 
-That's it. Four commands. Nothing else.
+**`rixi init`** scans your system, detects installed components, asks five questions, and packages your rice into a clean structured directory. Done in 30 seconds.
+
+**`rixi apply <author/theme>`** snapshots your current state first, then copies configs to the right places using the built-in component registry. No paths needed in the manifest.
+
+**`rixi rollback`** reverts to the last snapshot instantly. One command. No drama.
+
+**`rixi list`** shows everything installed locally with `[current]` marked.
+
+**`rixi pull <author/theme>`** downloads a rice from the community registry into your local store.
+
+**`rixi push <author/theme>`** validates your local rice, authenticates with GitHub, uploads files to your fork, and opens a PR against `rixi-dev/themes`.
 
 ---
 
 ## Features
 
-- **`rixi init`** — interactive scaffolding. Scans your system, detects installed components, asks five questions, packages your rice into a clean structured directory. Done in 30 seconds.
-- **`rixi apply <author/theme>`** — snapshots your current state first, then copies configs to the right places per the built-in component registry. No paths needed in the manifest.
-- **`rixi rollback`** — something broke? One command gets you back. Instantly. No drama.
-- **`rixi list`** — see everything installed locally with `[current]` marked.
-- **Distro-aware dependency warnings** — missing `bspwm`? rixi prints the exact `pacman`/`apt`/`dnf` command to install it.
-- **29-component registry** — rixi ships knowing where every tool's config lives on your system.
-- **Shell config management** — rixi can handle zsh/bash/fish prompt config as part of a rice.
-- **Wallpaper handling** — feh, nitrogen, hyprpaper, swww, swaybg — rixi sets it automatically.
-- **Snapshots** — every apply creates a timestamped snapshot of your previous state. Rollback is always available.
-
----
-
-## Demo output
-
-```
-$ rixi init
-
-? Theme name: gruvbox
-? Author: sathiya
-? Description: minimal gruvbox bspwm setup
-? Color scheme: gruvbox
-? Tags: minimal, dark
-
-Scanning installed components...
-  ✓ bspwm       ~/.config/bspwm/bspwmrc
-  ✓ polybar     ~/.config/polybar/config
-  ✓ rofi        ~/.config/rofi/config.rasi
-  ✓ alacritty   ~/.config/alacritty/alacritty.toml
-  ✓ picom       ~/.config/picom/picom.conf
-  ✗ hyprland    not found
-
-Scaffolded ~/.local/share/rixi/store/sathiya/gruvbox — fill in your metadata and run rixi apply sathiya/gruvbox
-```
-
-```
-$ rixi apply sathiya/gruvbox
-
-Applying sathiya/gruvbox...
-
-Missing dependencies (install manually):
-  [pacman] sudo pacman -S bspwm sxhkd polybar rofi picom feh
-  [fonts]  JetBrainsMono Nerd Font — https://nerdfonts.com
-
-Proceed anyway? [y/N] y
-
-Snapshotting current state... done
-
-Applying components:
-  ✓ bspwm       → ~/.config/bspwm/bspwmrc
-  ✓ polybar     → ~/.config/polybar/config
-  ✓ rofi        → ~/.config/rofi/config.rasi
-  ✓ alacritty   → ~/.config/alacritty/alacritty.toml
-  ✓ picom       → ~/.config/picom/picom.conf
-  ✓ wallpaper   set via feh
-
-Applied sathiya/gruvbox. Run rixi rollback to undo.
-```
-
-```
-$ rixi rollback
-
-Rolling back to snapshot 2026-03-12T18:42:00...
-  ✓ bspwm       restored
-  ✓ polybar     restored
-  ✓ rofi        restored
-  ✓ alacritty   restored
-  ✓ picom       restored
-
-Rollback complete.
-```
-
-```
-$ rixi list
-
-Installed rices:
-  sathiya/gruvbox     [current]
-  sathiya/nord
-  owl4ce/aesthetic
-```
+- **Distro-aware dependency warnings.** Missing `bspwm`? RIXI prints the exact `pacman`/`apt`/`dnf` command to install it.
+- **29-component registry.** RIXI ships knowing where every supported tool's config lives on your system.
+- **Shell config management.** RIXI handles zsh/bash/fish prompt config as part of a rice.
+- **Wallpaper handling.** feh, nitrogen, hyprpaper, swww, swaybg — RIXI sets it automatically.
+- **Timestamped snapshots.** Every apply creates a snapshot of your previous state. Rollback is always one command away.
 
 ---
 
 ## Rice structure
 
-Every rixi rice follows a single, predictable layout:
+Every RIXI rice follows a single, predictable layout:
 
 ```
 ~/.local/share/rixi/store/
@@ -174,8 +97,6 @@ Every rixi rice follows a single, predictable layout:
         gruvbox.png
       preview.png
 ```
-
-No surprises. No guessing. rixi always knows where everything is.
 
 ---
 
@@ -203,7 +124,7 @@ file = "walls/gruvbox.png"
 setter = "feh"
 ```
 
-That's it. No file paths. No mappings. rixi ships with a built-in registry that knows where every component's config lives.
+No file paths. No custom mappings. RIXI ships with a built-in registry that knows where every component's config lives.
 
 ---
 
@@ -223,74 +144,44 @@ That's it. No file paths. No mappings. rixi ships with a built-in registry that 
 | Shell prompts | starship |
 | Keybindings | sxhkd |
 
-Missing something? Open a PR to add it to the registry.
+Missing something? [Open a PR](https://github.com/rixi-dev/rixi) to add it to the registry.
 
 ---
 
 ## Installation
 
+### cargo
 ```bash
 cargo install rixi
 ```
 
-Or build from source:
-
+### Build from source
 ```bash
-git clone https://github.com/rixi-rs/rixi
+git clone https://github.com/rixi-dev/rixi
 cd rixi
 cargo build --release
+chmod +x target/release/rixi
 sudo cp target/release/rixi /usr/local/bin/
 ```
-
-**Requirements:**
-- Linux (5.13+ recommended)
-- Rust 1.75+
 
 ---
 
 ## Roadmap
 
-| Version | What's coming |
-|---|---|
-| `v0.1` ✓ | Local rice manager — init, apply, rollback, list. Full component registry (29 components), dependency detection, shell config, wallpaper handling. |
-| `v0.2` | Landlock kernel sandboxing — security-first apply |
-| `v0.3` | Community themes — `rixi-dev/themes` registry. Users add themes, RIXI pulls from them. |
-| `v0.4+` | TUI browser, network sync, signing |
-
----
-
-## Philosophy
-
-RIXI has opinions and is not sorry about them:
-
-- **Terminal only.** No GUI. No Electron. No web interface. Ever.
-- **Rust.** Memory safe, fast, single binary. No runtime dependencies.
-- **Rollback first.** RIXI snapshots before it touches anything. You can always go back.
-- **Predictable structure.** One layout. Always. Ambiguity is how things break.
-- **Kernel-close.** Landlock sandboxing is coming. The kernel does the security work, not us.
+- [x] **v0.1** — Local rice manager: init, apply, rollback, list. Full 29-component registry, dependency detection, shell config, wallpaper handling.
+- [x] **v0.2** — Community registry via `rixi-dev/themes`. Pull and push rices directly from the terminal.
+- [ ] **v0.3** — TUI browser, search, ratings.
 
 ---
 
 ## Contributing
 
-rixi is early and moving fast. Issues, PRs, and feedback are all welcome.
+RIXI is early and moving fast. Issues, PRs, and feedback are all welcome.
 
-To add a component to the registry, open a PR and add an entry to `src/registry.rs`.
-
-To submit a theme to the v0.3+ community registry (`rixi-dev/themes`), watch this space.
+To submit a theme, use `rixi push <author/theme>`. See [CONTRIBUTING.md](CONTRIBUTING.md) for everything else.
 
 ---
 
 ## License
 
-MIT — do whatever you want.
-
----
-
-<div align="center">
-
-built with 🦀 by [@sathiya](https://github.com/Sathiya-Moorthi) and the Linux ricing community
-
-*stop copying. start RIXI.*
-
-</div>
+[MIT](LICENSE).
