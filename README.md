@@ -8,7 +8,7 @@
 
 <br/>
 
-[![version](https://img.shields.io/badge/version-0.2.0-orange?style=flat-square)](https://github.com/rixi-dev/rixi/releases) [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![built with rust](https://img.shields.io/badge/built%20with-rust-orange?style=flat-square)](https://www.rust-lang.org/) [![linux only](https://img.shields.io/badge/linux-only-yellow?style=flat-square)]()
+[![version](https://img.shields.io/badge/version-0.2.1-orange?style=flat-square)](https://github.com/rixi-dev/rixi/releases) [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![built with rust](https://img.shields.io/badge/built%20with-rust-orange?style=flat-square)](https://www.rust-lang.org/) [![linux only](https://img.shields.io/badge/linux-only-yellow?style=flat-square)]()
 
 </p>
 
