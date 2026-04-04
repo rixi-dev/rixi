@@ -1,6 +1,7 @@
 use crate::errors::{Result, RixiError};
 use crate::paths;
 use crate::registry;
+use crate::wallpaper;
 
 /// Create a snapshot of all files that are about to be overwritten.
 /// Returns the snapshot timestamp string used as the directory name.
@@ -28,6 +29,9 @@ pub fn create_snapshot(components: &[String]) -> Result<String> {
             }
         }
     }
+
+    // Snapshot currently managed wallpaper so rollback can re-apply it.
+    wallpaper::snapshot_current(&snapshot_dir)?;
 
     Ok(timestamp)
 }
@@ -67,6 +71,10 @@ pub fn restore_snapshot(snapshot_id: &str) -> Result<Vec<String>> {
             }
             restored.push(component_name);
         }
+    }
+
+    if wallpaper::restore_from_snapshot(&snapshot_dir)? {
+        restored.push("wallpaper".to_string());
     }
 
     Ok(restored)
