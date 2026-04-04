@@ -13,9 +13,6 @@ pub struct Manifest {
     pub dependencies: Dependencies,
 
     #[serde(default)]
-    pub shell: Option<ShellConfig>,
-
-    #[serde(default)]
     pub wallpaper: Option<WallpaperConfig>,
 
     #[serde(default)]
@@ -23,21 +20,6 @@ pub struct Manifest {
 
     #[serde(default)]
     pub hooks: Hooks,
-}
-
-/// Shell configuration — rixi never overwrites .zshrc/.bashrc/config.fish directly.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShellConfig {
-    /// Shell type: "zsh", "bash", or "fish"
-    #[serde(rename = "type")]
-    pub shell_type: String,
-    /// Prompt: "starship", "p10k", "oh-my-zsh", or "none"
-    #[serde(default = "default_prompt")]
-    pub prompt: String,
-}
-
-fn default_prompt() -> String {
-    "none".to_string()
 }
 
 /// Wallpaper configuration.

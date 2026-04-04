@@ -6,7 +6,6 @@ use crate::errors::{Result, RixiError};
 use crate::manifest::Manifest;
 use crate::paths;
 use crate::registry;
-use crate::shell;
 use crate::snapshot;
 use crate::state::State;
 use crate::wallpaper;
@@ -61,9 +60,7 @@ pub fn run(rice: &str) -> Result<()> {
 
     // 4. Snapshot current state
     print!("{}", "Snapshotting current state... ".dimmed());
-    let shell_config = manifest.shell.clone().or_else(detect_shell);
-    let has_shell = shell_config.is_some();
-    let snapshot_id = snapshot::create_snapshot(&manifest.meta.components, has_shell)?;
+    let snapshot_id = snapshot::create_snapshot(&manifest.meta.components)?;
     println!("{}", "done".green());
     println!();
 
@@ -97,21 +94,14 @@ pub fn run(rice: &str) -> Result<()> {
         }
     }
 
-    // 6. Handle shell configuration
-    if let Some(ref sc) = shell_config {
-        println!();
-        println!("{}", "Shell configuration:".bold());
-        shell::apply(sc, &manifest.namespace())?;
-    }
-
-    // 7. Set wallpaper
+    // 6. Set wallpaper
     if let Some(ref wall_config) = manifest.wallpaper {
         println!();
         println!("{}", "Wallpaper:".bold());
         wallpaper::apply(wall_config, &rice_dir)?;
     }
 
-    // 8. Reload components that have a reload command
+    // 7. Reload components that have a reload command
     println!();
     println!("{}", "Reloading components:".bold());
     for component in &manifest.meta.components {
@@ -152,7 +142,7 @@ pub fn run(rice: &str) -> Result<()> {
         }
     }
 
-    // 9. Update state
+    // 8. Update state
     let mut state = State::load()?;
     state.set_current(
         manifest.meta.author.clone(),
@@ -173,37 +163,6 @@ pub fn run(rice: &str) -> Result<()> {
     );
 
     Ok(())
-}
-
-/// Detect the user's shell from $SHELL and return a ShellConfig.
-fn detect_shell() -> Option<crate::manifest::ShellConfig> {
-    let shell_var = std::env::var("SHELL").ok()?;
-    let shell_type = if shell_var.contains("zsh") {
-        "zsh"
-    } else if shell_var.contains("bash") {
-        "bash"
-    } else if shell_var.contains("fish") {
-        "fish"
-    } else {
-        return None;
-    };
-
-    let prompt = if which_exists("starship") { "starship" } else { "none" };
-
-    Some(crate::manifest::ShellConfig {
-        shell_type: shell_type.to_string(),
-        prompt: prompt.to_string(),
-    })
-}
-
-fn which_exists(cmd: &str) -> bool {
-    std::process::Command::new("which")
-        .arg(cmd)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
 }
 
 /// Copy component files from the rice configs dir to their target XDG paths.

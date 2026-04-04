@@ -174,12 +174,5 @@ pub fn builtin_registry() -> HashMap<&'static str, ComponentEntry> {
         display: "wayland",
     });
 
-    // ── Shell Prompts ──────────────────────────────────────────────
-    m.insert("starship", ComponentEntry {
-        paths: vec!["~/.config/starship.toml"],
-        reload: "",
-        display: "both",
-    });
-
     m
 }

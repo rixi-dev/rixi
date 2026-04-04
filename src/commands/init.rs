@@ -12,7 +12,7 @@ use crate::registry;
 const KNOWN_COMPONENTS: &[&str] = &[
     "bspwm", "i3", "openbox", "awesome", "herbstluftwm", "hypr", "sway", "river", "niri",
     "waybar", "polybar", "eww", "rofi", "wofi", "tofi", "fuzzel", "kitty", "alacritty",
-    "wezterm", "foot", "dunst", "mako", "swaync", "picom", "swaylock", "fish", "starship",
+    "wezterm", "foot", "dunst", "mako", "swaync", "picom", "swaylock",
 ];
 
 /// A detected component: name + the source directory holding its config files.
@@ -122,7 +122,6 @@ pub fn run(_scan_path: Option<&Path>) -> Result<()> {
             description: Some(description),
         },
         dependencies: Dependencies::default(),
-        shell: None,
         wallpaper: wallpaper.clone(),
         overrides: HashMap::new(),
         hooks: Hooks::default(),
@@ -184,14 +183,7 @@ fn scan_components(config_dir: &Path) -> Vec<DetectedComponent> {
             None => continue,
         };
 
-        // Handle top-level files (e.g. ~/.config/starship.toml)
         if path.is_file() {
-            if dir_name == "starship.toml" {
-                result.push(DetectedComponent {
-                    name: "starship".to_string(),
-                    source_dir: config_dir.to_path_buf(),
-                });
-            }
             continue;
         }
 

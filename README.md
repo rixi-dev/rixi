@@ -66,8 +66,7 @@ rixi push        # submit your local rice as a GitHub PR
 ## Features
 
 - **Distro-aware dependency warnings.** Missing `bspwm`? RIXI prints the exact `pacman`/`apt`/`dnf` command to install it.
-- **29-component registry.** RIXI ships knowing where every supported tool's config lives on your system.
-- **Shell config management.** RIXI handles zsh/bash/fish prompt config as part of a rice.
+- **Built-in component registry.** RIXI ships knowing where supported tools' config files live on your system.
 - **Wallpaper handling.** feh, nitrogen, hyprpaper, swww, swaybg — RIXI sets it automatically.
 - **Timestamped snapshots.** Every apply creates a snapshot of your previous state. Rollback is always one command away.
 
@@ -141,7 +140,6 @@ No file paths. No custom mappings. RIXI ships with a built-in registry that know
 | Compositor (X11) | picom |
 | Wallpaper setters | feh, nitrogen, hyprpaper, swww, swaybg |
 | Lock screens | i3lock, swaylock, hyprlock |
-| Shell prompts | starship |
 | Keybindings | sxhkd |
 
 Missing something? [Open a PR](https://github.com/rixi-dev/rixi) to add it to the registry.
@@ -168,9 +166,9 @@ sudo cp target/release/rixi /usr/local/bin/
 
 ## Roadmap
 
-- [x] **v0.1** — Local rice manager: init, apply, rollback, list. Full 29-component registry, dependency detection, shell config, wallpaper handling.
+- [x] **v0.1** — Local rice manager: init, apply, rollback, list. Built-in component registry, dependency detection, wallpaper handling.
 - [x] **v0.2** — Community registry via `rixi-dev/themes`. Pull and push rices directly from the terminal.
-- [ ] **v0.3** — TUI browser, search, ratings.
+- [ ] **v0.3** — TUI browser, search, ratings, and an improved shell-integration design.
 
 ---
 
